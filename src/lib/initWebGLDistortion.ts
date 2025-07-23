@@ -25,7 +25,7 @@ export default function initWebGLDistortion({
 
   // Configuration parameters
   const params = {
-    falloff: 0.4,
+    falloff: 0.6,
     alpha: 1.1,
     dissipation: 0.965,
     distortionStrength: image.dataset.distortionStrength
