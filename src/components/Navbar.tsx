@@ -1,4 +1,4 @@
-import Link from "next/link";
+import LinkRotation from "./LinkRotation";
 export default function Navbar() {
   return (
     <div className="grid grid-cols-2 gap-2 text-white pt-5 px-5">
@@ -10,13 +10,13 @@ export default function Navbar() {
         </h3>
       </div>
       <div className="flex justify-between">
-        <div className="flex gap-2">
-          <Link href="/">Home</Link>
-          <Link href="/">About</Link>
-          <Link href="/">Whatever</Link>
+        <div className="flex gap-4">
+          <LinkRotation title="Work" href="/" />
+          <LinkRotation title="About" href="/" />
+          <LinkRotation title="Whatever" href="/" />
         </div>
         <div>
-          <Link href="/">Contact</Link>
+          <LinkRotation title="Contact" href="/" />
         </div>
       </div>
     </div>
