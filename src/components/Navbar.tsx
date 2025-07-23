@@ -1,13 +1,11 @@
 import LinkRotation from "./LinkRotation";
+import LinkIconRotation from "./LinkIconRotation";
+import ScatterTextMotion from "./ScatterTextMotion";
 export default function Navbar() {
   return (
     <div className="grid grid-cols-2 gap-2 text-white pt-5 px-5">
       <div>
-        <h3 className="font-bold xl:text-3xl lg:text-2xl md:text-xl text-md">
-          We’re a creative-owned <br />
-          agency that specialises in <br />
-          Super x Solid outcomes.
-        </h3>
+        <ScatterTextMotion />
       </div>
       <div className="flex justify-between">
         <div className="flex gap-4">
@@ -16,7 +14,7 @@ export default function Navbar() {
           <LinkRotation title="Whatever" href="/" />
         </div>
         <div>
-          <LinkRotation title="Contact" href="/" />
+          <LinkIconRotation title="Contact" href="/" />
         </div>
       </div>
     </div>

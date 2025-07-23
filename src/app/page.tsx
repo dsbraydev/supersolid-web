@@ -7,7 +7,7 @@ const DistortedLogo = dynamic(() => import("../components/DistortedLogo"), {
 
 export default function Home() {
   return (
-    <div className="flex justify-center items-center h-screen px-16">
+    <div className="flex justify-center items-center h-[calc(100vh-200px)] px-16">
       <DistortedLogo />
     </div>
   );

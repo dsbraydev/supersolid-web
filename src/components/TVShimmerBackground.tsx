@@ -19,14 +19,21 @@ export default function TVShimmerBackground() {
 
     resizeCanvas();
     window.addEventListener("resize", resizeCanvas);
-
     const draw = () => {
       const imageData = ctx.createImageData(canvas.width, canvas.height);
       const buffer = new Uint32Array(imageData.data.buffer);
 
       for (let i = 0; i < buffer.length; i++) {
-        const gray = Math.random() * 30; // dark shimmer
-        buffer[i] = (255 << 24) | (gray << 16) | (gray << 8) | gray;
+        // Reduce brightness range by 50%
+        const baseGray = (50 + Math.random() * 100) * 0.6; // was 50 to 150, now ~25 to 75
+
+        // Reduce color intensity by 50%
+        const r = baseGray * 0.8 * 0.6; // previously baseGray * 0.8
+        const g = baseGray * 0.85 * 0.6; // previously baseGray * 0.85
+        const b = baseGray * 1 * 0.5; // previously baseGray * 1
+
+        buffer[i] =
+          (255 << 24) | ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff);
       }
 
       ctx.putImageData(imageData, 0, 0);
