@@ -1,9 +1,26 @@
 import * as THREE from "three";
 
-export default function initWebGLDistortion({ container, canvas, image }) {
+interface WebGLDistortionProps {
+  container: HTMLElement;
+  canvas: HTMLCanvasElement;
+  image: HTMLImageElement & { dataset: { distortionStrength?: string } };
+}
+
+export default function initWebGLDistortion({
+  container,
+  canvas,
+  image,
+}: WebGLDistortionProps) {
   if (!container || !canvas || !image) {
     console.error("Invalid inputs: container, canvas, or image missing");
-    return;
+    return () => {};
+  }
+
+  // Check WebGL context availability
+  const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
+  if (!gl) {
+    console.error("WebGL not supported or context creation failed");
+    return () => {};
   }
 
   // Configuration parameters
@@ -12,7 +29,7 @@ export default function initWebGLDistortion({ container, canvas, image }) {
     alpha: 1.1,
     dissipation: 0.965,
     distortionStrength: image.dataset.distortionStrength
-      ? parseFloat(image.dataset.distortionStrength)
+      ? parseFloat(image.dataset.distortionStrength) || 0.08
       : 0.08,
     chromaticAberration: 0.004,
     chromaticSpread: 1,
@@ -44,7 +61,7 @@ export default function initWebGLDistortion({ container, canvas, image }) {
   const flowmapCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
   // Texture loading
-  let texture;
+  let texture: THREE.Texture | null = null;
   const textureLoader = new THREE.TextureLoader();
   textureLoader.crossOrigin = "anonymous";
   texture = textureLoader.load(
@@ -62,6 +79,25 @@ export default function initWebGLDistortion({ container, canvas, image }) {
     undefined,
     (err) => {
       console.error("Texture load failed:", err);
+      // Retry texture load after a delay
+      setTimeout(() => {
+        textureLoader.load(image.src, (tex) => {
+          tex.minFilter = THREE.LinearFilter;
+          tex.magFilter = THREE.LinearFilter;
+          tex.wrapS = THREE.ClampToEdgeWrapping;
+          tex.wrapT = THREE.ClampToEdgeWrapping;
+          console.log(
+            "Texture retry loaded:",
+            tex.image.width,
+            "x",
+            tex.image.height
+          );
+          texture = tex;
+          updateRenderTargets();
+          resize();
+          animate();
+        });
+      }, 1000);
     }
   );
 
@@ -73,8 +109,14 @@ export default function initWebGLDistortion({ container, canvas, image }) {
     type: THREE.HalfFloatType,
     colorSpace: THREE.SRGBColorSpace,
   };
-  let flowmapRT1, flowmapRT2, finalRT1, finalRT2;
-  let currentFlowmapRT, previousFlowmapRT, currentFinalRT, previousFinalRT;
+  let flowmapRT1: THREE.WebGLRenderTarget | null = null;
+  let flowmapRT2: THREE.WebGLRenderTarget | null = null;
+  let finalRT1: THREE.WebGLRenderTarget | null = null;
+  let finalRT2: THREE.WebGLRenderTarget | null = null;
+  let currentFlowmapRT: THREE.WebGLRenderTarget | null = null;
+  let previousFlowmapRT: THREE.WebGLRenderTarget | null = null;
+  let currentFinalRT: THREE.WebGLRenderTarget | null = null;
+  let previousFinalRT: THREE.WebGLRenderTarget | null = null;
 
   function updateRenderTargets() {
     const flowmapSize = 128;
@@ -238,7 +280,7 @@ export default function initWebGLDistortion({ container, canvas, image }) {
     uAlpha: { value: params.alpha },
     uDissipation: { value: params.dissipation },
     uAspect: { value: 1 },
-    uTexture: { value: null },
+    uTexture: { value: null as THREE.Texture | null },
   };
   const flowmapMaterial = new THREE.ShaderMaterial({
     vertexShader: `
@@ -258,8 +300,8 @@ export default function initWebGLDistortion({ container, canvas, image }) {
   const geometry = new THREE.PlaneGeometry(2, 2);
   const uniforms = {
     uLogo: { value: texture },
-    uFlowmap: { value: null },
-    uPreviousFrame: { value: null },
+    uFlowmap: { value: null as THREE.Texture | null },
+    uPreviousFrame: { value: null as THREE.Texture | null },
     uImageScale: { value: new THREE.Vector2(1, 1) },
     uImageOffset: { value: new THREE.Vector2(0, 0) },
     uDistortionStrength: { value: params.distortionStrength },
@@ -288,7 +330,7 @@ export default function initWebGLDistortion({ container, canvas, image }) {
     smoothVelocity: new THREE.Vector2(0, 0),
   };
 
-  function updateMouse(x, y) {
+  function updateMouse(x: number, y: number) {
     const rect = container.getBoundingClientRect();
     const mx = (x - rect.left) / rect.width;
     const my = 1 - (y - rect.top) / rect.height;
@@ -296,11 +338,11 @@ export default function initWebGLDistortion({ container, canvas, image }) {
     console.log("Mouse updated:", mx, my);
   }
 
-  function onMouseMove(event) {
+  function onMouseMove(event: MouseEvent) {
     updateMouse(event.clientX, event.clientY);
   }
 
-  function onTouchStart(event) {
+  function onTouchStart(event: TouchEvent) {
     if (event.touches.length > 0) {
       const touch = event.touches[0];
       updateMouse(touch.clientX, touch.clientY);
@@ -309,7 +351,7 @@ export default function initWebGLDistortion({ container, canvas, image }) {
     }
   }
 
-  function onTouchMove(event) {
+  function onTouchMove(event: TouchEvent) {
     if (event.touches.length > 0) {
       const touch = event.touches[0];
       updateMouse(touch.clientX, touch.clientY);
@@ -325,15 +367,18 @@ export default function initWebGLDistortion({ container, canvas, image }) {
   container.addEventListener("touchmove", onTouchMove, { passive: true });
   container.addEventListener("touchend", onTouchEnd, { passive: true });
 
-  // Resize handling
+  // Debounced resize handling
+  let resizeTimeout: NodeJS.Timeout;
   function resize() {
     const { clientWidth, clientHeight } = container;
     if (clientWidth === 0 || clientHeight === 0) {
-      console.warn("Container has zero dimensions");
+      console.warn("Container has zero dimensions, retrying resize");
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(resize, 100);
       return;
     }
 
-    if (texture.image) {
+    if (texture?.image) {
       const imgWidth = texture.image.width;
       const imgHeight = texture.image.height;
       const imgAspect = imgWidth / imgHeight;
@@ -362,8 +407,8 @@ export default function initWebGLDistortion({ container, canvas, image }) {
       uniforms.uImageOffset.value.set(0, 0);
 
       const finalSize = Math.min(canvasWidth, 512);
-      finalRT1.setSize(finalSize, finalSize);
-      finalRT2.setSize(finalSize, finalSize);
+      finalRT1?.setSize(finalSize, finalSize);
+      finalRT2?.setSize(finalSize, finalSize);
       console.log(
         "Resized canvas:",
         canvasWidth,
@@ -373,16 +418,38 @@ export default function initWebGLDistortion({ container, canvas, image }) {
         scaleX,
         scaleY
       );
+    } else {
+      console.warn("Texture not ready, retrying resize");
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(resize, 100);
     }
   }
 
-  window.addEventListener("resize", resize);
+  window.addEventListener(
+    "resize",
+    () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(resize, 100);
+    },
+    { passive: true }
+  );
 
   // Animation loop
-  let frameId;
+  let frameId: number;
   function animate() {
-    if (!texture.image) {
-      console.warn("Texture not ready, skipping frame");
+    if (!texture?.image) {
+      console.warn("Texture not ready, retrying animation");
+      frameId = requestAnimationFrame(animate);
+      return;
+    }
+
+    if (
+      !currentFlowmapRT ||
+      !previousFlowmapRT ||
+      !currentFinalRT ||
+      !previousFinalRT
+    ) {
+      console.warn("Render targets not initialized, retrying animation");
       frameId = requestAnimationFrame(animate);
       return;
     }
@@ -428,9 +495,13 @@ export default function initWebGLDistortion({ container, canvas, image }) {
     frameId = requestAnimationFrame(animate);
   }
 
+  // Force initial resize
+  setTimeout(resize, 0);
+
   // Cleanup
   const cleanup = () => {
     cancelAnimationFrame(frameId);
+    clearTimeout(resizeTimeout);
     container.removeEventListener("mousemove", onMouseMove);
     container.removeEventListener("touchstart", onTouchStart);
     container.removeEventListener("touchmove", onTouchMove);
