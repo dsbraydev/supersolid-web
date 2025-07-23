@@ -2,12 +2,9 @@
 import ScatterTextMotion from "@/components/ScatterTextMotion";
 import dynamic from "next/dynamic";
 import Logo from "../../public/logo.avif";
-const LandingCanvas = dynamic(
-  () => import("../app/(pages)/about/LandingCanvas"),
-  {
-    ssr: false,
-  }
-);
+const LandingCanvas = dynamic(() => import("../components/LandingCanvas"), {
+  ssr: false,
+});
 
 export default function Home() {
   return (
