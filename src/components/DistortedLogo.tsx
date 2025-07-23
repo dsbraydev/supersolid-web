@@ -74,9 +74,9 @@ export default function DistortedLogo() {
       ref={containerRef}
       className="relative"
       style={{
-        width: "100vw", // Full viewport width
-        maxWidth: "100%", // Respect parent constraints
-        margin: "0 auto", // Center horizontally
+        width: "100vw",
+        maxWidth: "100%",
+        margin: "0 auto",
       }}
     >
       <img

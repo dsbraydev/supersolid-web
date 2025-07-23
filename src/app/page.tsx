@@ -1,14 +1,28 @@
 "use client";
+import ScatterTextMotion from "@/components/ScatterTextMotion";
 import dynamic from "next/dynamic";
-
-const DistortedLogo = dynamic(() => import("../components/DistortedLogo"), {
-  ssr: false,
-});
+import Logo from "../../public/logo.avif";
+const LandingCanvas = dynamic(
+  () => import("../app/(pages)/about/LandingCanvas"),
+  {
+    ssr: false,
+  }
+);
 
 export default function Home() {
   return (
-    <div className="flex justify-center items-center h-[calc(100vh-200px)] px-16">
-      <DistortedLogo />
+    <div className="p-5">
+      <ScatterTextMotion />
+      <div className="flex justify-center items-center h-full">
+        <LandingCanvas imageSrc={Logo.src} />;
+      </div>
+      <div>
+        <div className="absolute bottom-5 left-5 bg-white w-2 h-2 rounded-full" />
+        <p className="absolute bottom-5 left-1/2 transform -translate-x-1/2 text-white text-sm font-medium">
+          Scroll to explore
+        </p>
+        <div className="absolute bottom-5 right-5 bg-white w-2 h-2 rounded-full" />
+      </div>
     </div>
   );
 }

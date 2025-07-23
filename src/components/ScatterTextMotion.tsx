@@ -20,9 +20,9 @@ export default function SplitText() {
         { opacity: [0, 1], y: [10, 0] },
         {
           type: "spring",
-          duration: 2,
+          duration: 3,
           bounce: 0,
-          delay: stagger(0.05),
+          delay: stagger(0.07),
         }
       );
     });
@@ -30,7 +30,7 @@ export default function SplitText() {
 
   return (
     <div
-      className="flex justify-center items-center w-full max-w-[600px] text-left text-2xl leading-snug font-semibold"
+      className="flex justify-center items-center w-full max-w-[600px] text-left text-3xl leading-snug font-semibold text-white"
       ref={containerRef}
       style={{ visibility: "hidden" }}
     >
